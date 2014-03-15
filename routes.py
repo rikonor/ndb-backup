@@ -4,6 +4,7 @@
 from handlers import *
 from handlers.MainHandlers import *
 from handlers.ndbBackup import *
+from handlers.ndbRecover import *
 
 #This is the place where all of your URL mapping goes
 route_list = [
@@ -15,4 +16,6 @@ route_list = [
 	('/history', HistoryPageHandler),
 	('/remove', RemoveHandler),
 	('/ndbbackup', ndbBackup),
-	]
+	('/ndbrecover', ndbRecover),
+	('/ndbrecoverupload', ndbRecoverUpload),
+]

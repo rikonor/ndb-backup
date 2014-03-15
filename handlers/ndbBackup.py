@@ -8,6 +8,9 @@ from models import models
 from models.models_map import ModelsMap
 from security import hashes
 
+from google.appengine.ext.webapp import blobstore_handlers
+from google.appengine.ext import blobstore
+
 my_default_retry_params = gcs.RetryParams(initial_delay=0.2,
                                           max_delay=5.0,
                                           backoff_factor=2,
@@ -69,9 +72,7 @@ def putObjInWorksheet(ws, row, obj, clsInfo):
             ws.cell(row=row, column=column).value = keys.id()
         column += 1
 
-def saveWorkbook(wb):
-    # set filename as "backup_*current-datetime*"
-    FILENAME = BUCKET + "/backup_" + datetime.datetime.now().strftime("%m:%d:%Y-%T") + ".xlsx"
+def saveWorkbook(wb, FILENAME):
     # new cloud storage file
     gcs_file = gcs.open(FILENAME,
                         'w',
@@ -92,7 +93,7 @@ def getAllFromClass(name):
 
 #------------------------#
 
-def startBackup():
+def startBackup(FILENAME):
     wb = initWorkbook()
     Map = ModelsMap.Map
     # workbook and models map ready
@@ -107,32 +108,22 @@ def startBackup():
             putObjInWorksheet(ws, row, obj, clsInfo)
             row += 1
 
-    saveWorkbook(wb)
+    saveWorkbook(wb, FILENAME)
+
 #--------------------------------------------------------------
 # ndbBackup handler
 #--------------------------------------------------------------
-class ndbBackup(BaseHandler):
+class ndbBackup(blobstore_handlers.BlobstoreDownloadHandler):
 
     def get(self):
-        # user = Authenticate(self.request)
-        # if not user:
-        #     return self.redirect("/login")
-        #wb = Workbook()
-        #ws = wb.active
-        #ws.cell('A1').value = "Hello World!"
-
-        # gcs_file = gcs.open(filename)
-        # self.response.write(gcs_file.readline())
-        # gcs_file.seek(-1024, os.SEEK_END)
-        # self.response.write(gcs_file.read())
-        # gcs_file.close()
-
-        # stat = gcs.stat(filename)
-        # self.response.write(repr(stat))
-
-        # gcs.delete(filename)
-        startBackup()
-
-        return self.response.write("Done.")
-
+        user = Authenticate(self.request)
+        if not user:
+            return self.redirect("/login")
+        # set filename as "backup_*current-datetime*"
+        fname = "backup_" + datetime.datetime.now().strftime("%m:%d:%Y-%T") + ".xlsx"
+        FILENAME = BUCKET + "/" + fname
+        startBackup(FILENAME)
+        
+        blob_key =  blobstore.create_gs_key("/gs"+FILENAME)
+        return self.send_blob(blob_key, save_as=fname)
 #--------------------------------------------------------------
